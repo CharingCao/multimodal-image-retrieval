@@ -37,6 +37,7 @@ docker run --name qdrant -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/q
 3. 运行 `python search.py 路径/查询图.jpg 5`，返回前 5 个结果。
 
 配置项及权重见 `config.py`。扩展版本分别使用 `config_full.py`、`config_full_qwen.py` 和 `config_full_gemini.py`。
+深度图实验脚本需要自行设置 `DEPTH_DOWNLOAD_URL` 和 `DEPTH_BUCKET`，连接你有权使用的深度图服务。
 
 ## 数据与密钥
 
@@ -45,4 +46,3 @@ docker run --name qdrant -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/q
 ## 许可证
 
 自有业务代码以 [MIT License](LICENSE) 发布。外部模型、服务和依赖遵循各自的许可与使用条款。
-
