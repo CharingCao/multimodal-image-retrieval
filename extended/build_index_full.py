@@ -24,8 +24,8 @@ from pathlib import Path
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
-from analyze_full import analyze_full
-from config_full import (
+from extended.analyze_full import analyze_full
+from extended.config_full import (
     CLIP_DIM,
     COLLECTION_NAME,
     EMBEDDING_DIM,

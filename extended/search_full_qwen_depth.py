@@ -18,20 +18,20 @@ import numpy as np
 import requests
 
 from qdrant_client import QdrantClient
-from analyze_full import analyze_full
-from build_index_full import ( build_tier_text, extract_struct_flags, parse_description )
+from extended.analyze_full import analyze_full
+from extended.build_index_full import ( build_tier_text, extract_struct_flags, parse_description )
 
 # ============================================================
 # Qdrant
 # ============================================================
 
-from config_full import ( COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT )
+from extended.config_full import ( COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT )
 
 # ============================================================
 # Qwen配置
 # ============================================================
 
-from config_full_qwen import (
+from extended.config_full_qwen import (
     QWEN_VECTOR_NAME,
     TIER1_FIELDS,
     TIER2_FIELDS,
@@ -40,7 +40,7 @@ from config_full_qwen import (
     TOP_K,
 )
 from embedding import get_embedding
-from image_embedding_Qwen import ( get_image_embedding as get_qwen_embedding, )
+from extended.image_embedding_Qwen import ( get_image_embedding as get_qwen_embedding, )
 
 # Depth查询图片仍然使用CLIP编码
 from image_embedding import ( get_image_embedding as get_clip_embedding )

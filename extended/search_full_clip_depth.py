@@ -35,15 +35,15 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient
 
-from analyze_full import analyze_full
+from extended.analyze_full import analyze_full
 
-from build_index_full import (
+from extended.build_index_full import (
     build_tier_text,
     extract_struct_flags,
     parse_description,
 )
 
-from config_full import (
+from extended.config_full import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,

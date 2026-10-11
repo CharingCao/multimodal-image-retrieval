@@ -1,11 +1,9 @@
 """
-以图搜包材：用户上传图片 → Qwen图片向量 + Qwen-VL文本分析
-→ 四层加权检索 → 返回最相似包材。
+以图搜包材：用户上传图片 → Gemini图片向量 → Qwen-VL结构分析 → Tier1/2/3融合排序 → 返回最相似包材。
 
-实验版本：
-只将原 search_full.py 中的 CLIP 视觉召回替换为 Qwen3-VL-Embedding。
-Tier1 / Tier2 / Tier3 / 软约束 / 权重逻辑全部保持不变。
-用于和 CLIP baseline 做公平对比。
+只将Qwen视觉召回替换为Gemini Embedding。
+Qwen-VL结构分析、Tier1/2/3、软约束和评分规则保持不变。
+用于比较Gemini视觉模型与Qwen视觉模型的实际效果。
 """
 
 import sys
@@ -14,13 +12,13 @@ import numpy as np
 from collections import defaultdict
 from pathlib import Path
 from qdrant_client import QdrantClient
-from analyze_full import analyze_full
-from build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
-from config_full_qwen import (
+from extended.analyze_full import analyze_full
+from extended.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
+from extended.config_full_gemini import (
     COLLECTION_NAME,
+    GEMINI_VECTOR_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
-    QWEN_VECTOR_NAME,
     TIER1_FIELDS,
     TIER2_FIELDS,
     TIER3_FIELDS,
@@ -31,11 +29,9 @@ from config_full_qwen import (
 from embedding import get_embedding
 
 # ============================================================
-# Qwen 图片 embedding
+# Gemini 图片 embedding
 # ============================================================
-from image_embedding_Qwen import (
-    get_image_embedding as get_qwen_embedding
-)
+from extended.image_embedding_gemini import ( get_image_embedding as get_gemini_embedding )
 
 # ============================================================
 # Tier1规则评分
@@ -179,16 +175,16 @@ def search_similar_packaging(
 ) -> tuple[list[dict], str]:
 
     # ========================================================
-    # 1/5 Qwen图片向量
+    # 1/5 Gemini图片向量
     # ========================================================
 
     print( f"\n{'=' * 60}")
-    print("[1/5] 正在生成 Qwen 图片向量...")
+    print("[1/5] 正在生成Gemini图片向量...")
     print(f"{'=' * 60}")
-    qwen_vec = get_qwen_embedding( image_path )
+    gemini_vec = get_gemini_embedding( image_path )
     print(
-        f"  Qwen 向量维度: "
-        f"{len(qwen_vec)}"
+        f"  Gemini 向量维度: "
+        f"{len(gemini_vec)}"
     )
 
     # ========================================================
@@ -251,7 +247,7 @@ def search_similar_packaging(
     )
 
     # ========================================================
-    # 4/5 Qwen召回
+    # 4/5 Gemini召回
     # ========================================================
 
     print( f"\n{'=' * 60}" )
@@ -265,18 +261,18 @@ def search_similar_packaging(
 
     qdrant = QdrantClient( host=QDRANT_HOST, port=QDRANT_PORT, )
     candidate_pool = max( top_k, 100 )
-    results_qwen = qdrant.query_points(
+    results_gemini = qdrant.query_points(
         collection_name=COLLECTION_NAME,
-        query=qwen_vec,
-        using=QWEN_VECTOR_NAME,
+        query=gemini_vec,
+        using=GEMINI_VECTOR_NAME,
         query_filter=struct_filter,
         limit=candidate_pool,
         with_payload=True,
     )
 
     print(
-        f"  Qwen候选池 "
-        f"{len(results_qwen.points)} 条"
+        f"  Gemini候选池 "
+        f"{len(results_gemini.points)} 条"
     )
 
     # ========================================================
@@ -290,29 +286,29 @@ def search_similar_packaging(
     payloads = {}
     tier_scores = defaultdict(
         lambda: {
-            "qwen": 0.0,
+            "gemini": 0.0,
             "tier1": 0.0,
             "tier2": 0.0,
             "tier3": 0.0,
         }
     )
 
-    visual_weight = ( TIER_WEIGHTS["clip"] )
+    visual_weight = ( TIER_WEIGHTS["gemini"] )
     w1 = TIER_WEIGHTS[ "tier1" ]
     w2 = TIER_WEIGHTS[ "tier2" ]
     w3 = TIER_WEIGHTS[ "tier3" ]
 
     # ========================================================
-    # Qwen召回分
+    # Gemini召回分
     # ========================================================
 
-    for p in results_qwen.points:
+    for p in results_gemini.points:
         scores[p.id] += ( p.score * visual_weight )
-        tier_scores[ p.id ]["qwen"] = p.score
+        tier_scores[ p.id ]["gemini"] = p.score
         payloads[ p.id ] = p.payload
 
     # ========================================================
-    # 对Qwen候选重新计算Tier2 / Tier3
+    # 对Gemini候选重新计算Tier2 / Tier3
     # ========================================================
 
     for pid in payloads:
@@ -488,7 +484,7 @@ def print_results(
         )
         print(
             f"  分层得分: "
-            f"Qwen={sd['qwen']:.4f} "
+            f"Gemini={sd['gemini']:.4f} "
             f"| 类别={sd['tier1']:.4f} "
             f"| 外形={sd['tier2']:.4f} "
             f"| 细节={sd['tier3']:.4f}"
@@ -513,12 +509,12 @@ def main():
 
         print(
             "用法: "
-            "python search_full_qwen.py "
+            "python search_full_gemini.py "
             "<图片路径> [返回数量]"
         )
         print(
             "示例: "
-            "python search_full_qwen.py "
+            "python search_full_gemini.py "
             "data/image_input/01.png 10"
         )
         sys.exit( 1 )

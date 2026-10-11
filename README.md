@@ -2,12 +2,17 @@
 
 使用 Qdrant 存储向量，结合 CLIP 图像向量、DashScope 文本向量和 Qwen-VL 生成的结构化描述，检索相似包材图片。
 
-## 包含内容
+## 项目结构
 
-- `build_index.py`：扫描本地图片并建立索引。
-- `search.py`：使用查询图片检索相似图片。
-- `analyze.py`、`embedding.py`、`image_embedding.py`：描述生成与向量化。
-- `*_full.py` 和其他脚本：扩展检索、权重实验及其他模型的探索版本；可能需要额外的服务或配置。
+```text
+├── analyze.py, embedding.py, image_embedding.py  # 基础描述和向量化
+├── build_index.py, search.py, config.py           # 基础建库、检索与配置
+├── extended/                                      # 扩展检索和模型实验
+├── tools/                                         # 辅助脚本
+└── data/                                          # 本地输入目录（不提交图片）
+```
+
+扩展脚本包括多模型检索、深度图检索、重排序和权重实验；它们可能需要额外服务或配置。
 
 本公开版只包含业务代码。不包含原仓库历史、业务图片、描述缓存、Qdrant 数据、模型权重或内嵌的第三方 SAM3 源码。分割模块如需使用，请根据相应上游项目的许可自行安装。
 
@@ -36,7 +41,7 @@ docker run --name qdrant -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/q
 2. 运行 `python build_index.py --recreate` 创建索引；之后可用 `python build_index.py --skip-indexed` 增量入库。
 3. 运行 `python search.py 路径/查询图.jpg 5`，返回前 5 个结果。
 
-配置项及权重见 `config.py`。扩展版本分别使用 `config_full.py`、`config_full_qwen.py` 和 `config_full_gemini.py`。
+配置项及权重见 `config.py`。扩展版本的配置在 `extended/` 中。请从仓库根目录用模块方式运行扩展脚本，例如 `python -m extended.search_full`；辅助脚本同理，例如 `python -m tools.sync_cache_from_qdrant`。
 深度图实验脚本需要自行设置 `DEPTH_DOWNLOAD_URL` 和 `DEPTH_BUCKET`，连接你有权使用的深度图服务。
 
 ## 数据与密钥

@@ -1,4 +1,4 @@
-from search_weight import search_similar_packaging
+from extended.search_weight import search_similar_packaging
 import os
 
 TEST_IMAGES=[]

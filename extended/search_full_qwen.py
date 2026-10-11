@@ -1,17 +1,22 @@
 """
-以图搜包材：用户上传图片 → Qwen图片向量 + Qwen-VL文本分析 → 四层加权检索 → 返回最相似包材
+以图搜包材：用户上传图片 → Qwen图片向量 + Qwen-VL文本分析
+→ 四层加权检索 → 返回最相似包材。
+
+实验版本：
+只将原 search_full.py 中的 CLIP 视觉召回替换为 Qwen3-VL-Embedding。
+Tier1 / Tier2 / Tier3 / 软约束 / 权重逻辑全部保持不变。
+用于和 CLIP baseline 做公平对比。
 """
 
-import os
 import sys
 import re
 import numpy as np
 from collections import defaultdict
 from pathlib import Path
 from qdrant_client import QdrantClient
-from analyze_full import analyze_full
-from build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
-from config_full_qwen import (
+from extended.analyze_full import analyze_full
+from extended.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
+from extended.config_full_qwen import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
@@ -24,31 +29,23 @@ from config_full_qwen import (
 )
 
 from embedding import get_embedding
-from gpt_reranker import rerank_with_gpt
-
-GPT_RERANK_ENABLED = (
-    os.getenv("GPT_RERANK_ENABLED", "false").strip().lower()
-    in {"1", "true", "yes", "on"}
-)
-GPT_RERANK_TOP_N = int(os.getenv("GPT_RERANK_TOP_N", "15"))
-GPT_RERANK_ROUNDS = int(os.getenv("GPT_RERANK_ROUNDS", "3"))
-IMAGES_DIR = Path(
-    os.getenv(
-        "PACKAGING_IMAGES_DIR",
-        str(Path(__file__).resolve().parent / "data" / "images"),
-    )
-)
 
 # ============================================================
 # Qwen 图片 embedding
 # ============================================================
-from image_embedding_Qwen import ( get_image_embedding as get_qwen_embedding )
+from extended.image_embedding_Qwen import (
+    get_image_embedding as get_qwen_embedding
+)
 
 # ============================================================
 # Tier1规则评分
 # ============================================================
 
-def calculate_tier1_score( query_fields, target_description ):
+def calculate_tier1_score(
+        query_fields,
+        target_description
+):
+
     target_fields = parse_description( target_description )
     score = 0.0
 
@@ -72,7 +69,13 @@ def calculate_tier1_score( query_fields, target_description ):
 
     return score
 
-def split_structure_values( value: str ) -> set[str]:
+# ============================================================
+# 拆分结构属性
+# ============================================================
+
+def split_structure_values(
+        value: str
+) -> set[str]:
 
     if not value:
         return set()
@@ -88,7 +91,10 @@ def split_structure_values( value: str ) -> set[str]:
 # 单字段结构相似度
 # ============================================================
 
-def calculate_value_similarity( query_value: str, target_value: str ) -> float:
+def calculate_value_similarity(
+        query_value: str,
+        target_value: str,
+) -> float:
 
     query_items = split_structure_values( query_value )
     target_items = split_structure_values( target_value )
@@ -97,15 +103,20 @@ def calculate_value_similarity( query_value: str, target_value: str ) -> float:
         return 0.0
     if query_items == target_items:
         return 1.0
+
     common_count = len( query_items & target_items )
 
-    return ( 2.0 * common_count / ( len(query_items) + len(target_items) ) )
+    return ( 2.0 * common_count / ( len(query_items) + len(target_items) )
+    )
 
 # ============================================================
 # Tier2规则分
 # ============================================================
 
-def calculate_tier2_rule_score( query_fields: dict[str, str], target_fields: dict[str, str] ) -> float:
+def calculate_tier2_rule_score(
+        query_fields: dict[str, str],
+        target_fields: dict[str, str],
+) -> float:
 
     field_weights = {
         "整体瓶型": 0.35,
@@ -115,7 +126,10 @@ def calculate_tier2_rule_score( query_fields: dict[str, str], target_fields: dic
     }
     score = 0.0
 
-    for ( field_name, field_weight ) in field_weights.items():
+    for (
+        field_name,
+        field_weight
+    ) in field_weights.items():
 
         field_score = (
             calculate_value_similarity(
@@ -130,7 +144,10 @@ def calculate_tier2_rule_score( query_fields: dict[str, str], target_fields: dic
 # Tier3规则分
 # ============================================================
 
-def calculate_tier3_rule_score( query_fields: dict[str, str], target_fields: dict[str, str] ) -> float:
+def calculate_tier3_rule_score(
+        query_fields: dict[str, str],
+        target_fields: dict[str, str],
+) -> float:
 
     field_weights = {
         "瓶颈": 0.20,
@@ -151,11 +168,15 @@ def calculate_tier3_rule_score( query_fields: dict[str, str], target_fields: dic
         score += ( field_score * field_weight )
     return score
 
+
 # ============================================================
 # 搜索
 # ============================================================
 
-def search_similar_packaging( image_path: str, top_k: int = TOP_K ) -> tuple[list[dict], str]:
+def search_similar_packaging(
+        image_path: str,
+        top_k: int = TOP_K,
+) -> tuple[list[dict], str]:
 
     # ========================================================
     # 1/5 Qwen图片向量
@@ -295,12 +316,40 @@ def search_similar_packaging( image_path: str, top_k: int = TOP_K ) -> tuple[lis
     # ========================================================
 
     for pid in payloads:
-        desc = payloads[ pid ].get( "description", "" )
-        target_fields = ( parse_description( desc ) )
-        target_t2_text = ( build_tier_text( target_fields, TIER2_FIELDS ) )
-        target_t3_text = ( build_tier_text( target_fields, TIER3_FIELDS ) )
-        target_vec2 = ( get_embedding( target_t2_text ) )
-        target_vec3 = ( get_embedding( target_t3_text ) )
+
+        desc = payloads[
+            pid
+        ].get(
+            "description",
+            ""
+        )
+        target_fields = (
+            parse_description(
+                desc
+            )
+        )
+        target_t2_text = (
+            build_tier_text(
+                target_fields,
+                TIER2_FIELDS
+            )
+        )
+        target_t3_text = (
+            build_tier_text(
+                target_fields,
+                TIER3_FIELDS
+            )
+        )
+        target_vec2 = (
+            get_embedding(
+                target_t2_text
+            )
+        )
+        target_vec3 = (
+            get_embedding(
+                target_t3_text
+            )
+        )
 
         # ====================================================
         # cosine similarity
@@ -319,8 +368,16 @@ def search_similar_packaging( image_path: str, top_k: int = TOP_K ) -> tuple[lis
         tier2_score = ( tier2_vector_score * 0.70 + tier2_rule_score * 0.30 )
         tier3_score = ( tier3_vector_score * 0.70 + tier3_rule_score * 0.30 )
 
-        tier_scores[ pid ]["tier2"] = ( tier2_score )
-        tier_scores[ pid ]["tier3"] = ( tier3_score )
+        tier_scores[
+            pid
+        ]["tier2"] = (
+            tier2_score
+        )
+        tier_scores[
+            pid
+        ]["tier3"] = (
+            tier3_score
+        )
         scores[ pid ] += ( tier2_score * w2 )
         scores[ pid ] += ( tier3_score * w3 )
 
@@ -330,15 +387,38 @@ def search_similar_packaging( image_path: str, top_k: int = TOP_K ) -> tuple[lis
 
     for pid in payloads:
 
-        desc = payloads[ pid ].get( "description", "" )
-        tier_scores[ pid ]["tier1"] = ( calculate_tier1_score( fields, desc ) )
-        scores[ pid ] += ( tier_scores[ pid ]["tier1"] * w1 )
+        desc = payloads[
+            pid
+        ].get(
+            "description",
+            ""
+        )
+
+        tier_scores[
+            pid
+        ]["tier1"] = (
+            calculate_tier1_score(
+                fields,
+                desc
+            )
+        )
+
+        scores[
+            pid
+        ] += (
+            tier_scores[
+                pid
+            ]["tier1"]
+            *
+            w1
+        )
 
     for pid in scores:
         target = payloads[ pid ]
 
         if ( target.get("has_pump") != flags[ "has_pump" ] ):
             scores[ pid ] -= 0.15
+
         if ( target.get( "has_neck") != flags[ "has_neck" ] ):
             scores[ pid ] -= 0.05
 
@@ -346,13 +426,11 @@ def search_similar_packaging( image_path: str, top_k: int = TOP_K ) -> tuple[lis
     # 最终排序
     # ========================================================
 
-    # 先保留GPT需要的候选池，不能在重排前过早截断为top_k。
-    rerank_pool_size = (
-        max(top_k, GPT_RERANK_TOP_N)
-        if GPT_RERANK_ENABLED
-        else top_k
-    )
-    ranked = sorted( scores.items(), key=lambda x: x[1], reverse=True )[:rerank_pool_size]
+    ranked = sorted(
+        scores.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )[:top_k]
 
     # ========================================================
     # 返回结果
@@ -381,43 +459,17 @@ def search_similar_packaging( image_path: str, top_k: int = TOP_K ) -> tuple[lis
                 ),
             }
         )
-    # ========================================================
-    # GPT多顺序投票重排（失败时自动保留Qwen原始顺序）
-    # ========================================================
-
-    if GPT_RERANK_ENABLED:
-        print(f"\n{'=' * 60}")
-        print(
-            f"[GPT重排] 候选池={min(GPT_RERANK_TOP_N, len(matches))} "
-            f"| 轮数={GPT_RERANK_ROUNDS}"
-        )
-        print(f"{'=' * 60}")
-
-        rerank_candidates = matches[:GPT_RERANK_TOP_N]
-        untouched_candidates = matches[GPT_RERANK_TOP_N:]
-
-        try:
-            reranked = rerank_with_gpt(
-                query_image_path=image_path,
-                matches=rerank_candidates,
-                images_dir=IMAGES_DIR,
-                rounds=GPT_RERANK_ROUNDS,
-            )
-            matches = reranked + untouched_candidates
-            print( "GPT重排完成" )
-        except Exception as exc:
-            print(
-                "  [WARN] GPT重排失败，自动保留Qwen原始顺序："
-                f"{exc}"
-            )
-
-    return ( matches[:top_k], query_description )
+    return ( matches, query_description )
 
 # ============================================================
 # 输出搜索结果
 # ============================================================
 
-def print_results( query_image: str, query_desc: str, matches: list[dict] ):
+def print_results(
+        query_image: str,
+        query_desc: str,
+        matches: list[dict]
+):
 
     print( f"\n{'=' * 60}")
     print( "搜索结果" )
@@ -445,13 +497,6 @@ def print_results( query_image: str, query_desc: str, matches: list[dict] ):
             f"  文件: "
             f"{m['filename']}"
         )
-        if "gpt_rerank" in m:
-            gpt = m["gpt_rerank"]
-            print(
-                f"  GPT重排: group={gpt['group']} "
-                f"| 三轮名次={gpt['round_ranks']} "
-                f"| 平均名次={gpt['average_rank']:.2f}"
-            )
         print(
             f"  描述:\n"
             f"{m['description']}"
@@ -480,8 +525,13 @@ def main():
 
     image_path = ( sys.argv[1] )
 
-    top_k = ( int( sys.argv[2] )
-        if len( sys.argv ) > 2
+    top_k = (
+        int(
+            sys.argv[2]
+        )
+        if len(
+            sys.argv
+        ) > 2
         else TOP_K
     )
 
