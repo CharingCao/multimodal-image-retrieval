@@ -4,7 +4,7 @@ import os
 import sys
 import requests
 import numpy as np
-from optimized.config_full_qwen import DASHSCOPE_API_KEY
+from optimized.qwen.config_full_qwen import DASHSCOPE_API_KEY
 
 MODEL_NAME = "qwen3-vl-embedding"
 

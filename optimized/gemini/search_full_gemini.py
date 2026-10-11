@@ -14,7 +14,7 @@ from pathlib import Path
 from qdrant_client import QdrantClient
 from optimized.analyze_full import analyze_full
 from optimized.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
-from optimized.config_full_gemini import (
+from optimized.gemini.config_full_gemini import (
     COLLECTION_NAME,
     GEMINI_VECTOR_NAME,
     QDRANT_HOST,
@@ -26,12 +26,12 @@ from optimized.config_full_gemini import (
     TOP_K,
 )
 
-from shared.embedding import get_embedding
+from optimized.text_embedding import get_embedding
 
 # ============================================================
 # Gemini 图片 embedding
 # ============================================================
-from optimized.image_embedding_gemini import ( get_image_embedding as get_gemini_embedding )
+from optimized.gemini.image_embedding_gemini import ( get_image_embedding as get_gemini_embedding )
 
 # ============================================================
 # Tier1规则评分

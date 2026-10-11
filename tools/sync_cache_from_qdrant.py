@@ -2,7 +2,7 @@ import os
 import json
 from qdrant_client import QdrantClient
 
-from shared.config import (
+from baseline.config import (
     QDRANT_HOST,
     QDRANT_PORT,
     COLLECTION_NAME

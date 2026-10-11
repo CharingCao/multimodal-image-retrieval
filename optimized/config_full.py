@@ -17,8 +17,6 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "packaging_full_new")
 
 CLIP_VECTOR_NAME = "clip"
-DEPTH_VECTOR_NAME = "clip-depth"
-QWEN_VECTOR_NAME = "qwen3-vl-original"
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 IMAGES_DIR = os.path.join(PROJECT_ROOT, "data", "images")

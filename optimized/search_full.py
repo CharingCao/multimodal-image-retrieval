@@ -25,8 +25,8 @@ from optimized.config_full import (
     TIER_WEIGHTS,
     TOP_K,
 )
-from shared.embedding import get_embedding
-from shared.image_embedding import get_image_embedding
+from optimized.text_embedding import get_embedding
+from optimized.clip_embedding import get_image_embedding
 
 def calculate_tier1_score(
         query_fields,

@@ -16,7 +16,7 @@ QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_QWEN","packaging_full_v2")
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 IMAGES_DIR = os.path.join(PROJECT_ROOT, "data", "images")
 IMAGE_INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "image_input")
 

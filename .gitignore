@@ -10,11 +10,7 @@ __pycache__/
 .vscode/
 .DS_Store
 qdrant_storage/
-data/images/*
-!data/images/.gitkeep
-data/image_input/*
-!data/image_input/.gitkeep
-data/descriptions_cache*.json
+data/
 *.pt
 *.pth
 *.ckpt

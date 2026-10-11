@@ -16,7 +16,7 @@ from pathlib import Path
 from qdrant_client import QdrantClient
 from optimized.analyze_full import analyze_full
 from optimized.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
-from optimized.config_full_qwen import (
+from optimized.qwen.config_full_qwen import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
@@ -28,12 +28,12 @@ from optimized.config_full_qwen import (
     TOP_K,
 )
 
-from shared.embedding import get_embedding
+from optimized.text_embedding import get_embedding
 
 # ============================================================
 # Qwen 图片 embedding
 # ============================================================
-from optimized.image_embedding_Qwen import (
+from optimized.qwen.image_embedding_Qwen import (
     get_image_embedding as get_qwen_embedding
 )
 

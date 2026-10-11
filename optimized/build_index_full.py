@@ -36,8 +36,8 @@ from optimized.config_full import (
     TIER2_FIELDS,
     TIER3_FIELDS,
 )
-from shared.embedding import get_embedding
-from shared.image_embedding import get_image_embedding
+from optimized.text_embedding import get_embedding
+from optimized.clip_embedding import get_image_embedding
 
 CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "descriptions_cache_full.json")
 

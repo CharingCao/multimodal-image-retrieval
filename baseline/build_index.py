@@ -25,7 +25,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from baseline.analyze import analyze_packaging_image
-from shared.config import (
+from baseline.config import (
     CLIP_DIM,
     COLLECTION_NAME,
     EMBEDDING_DIM,
@@ -36,8 +36,8 @@ from shared.config import (
     TIER2_FIELDS,
     TIER3_FIELDS,
 )
-from shared.embedding import get_embedding
-from shared.image_embedding import get_image_embedding
+from baseline.embedding import get_embedding
+from baseline.image_embedding import get_image_embedding
 
 CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "descriptions_cache.json")
 

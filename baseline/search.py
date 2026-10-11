@@ -13,7 +13,7 @@ from qdrant_client.models import FieldCondition, Filter, MatchValue
 
 from baseline.analyze import analyze_packaging_image
 from baseline.build_index import build_tier_text, extract_struct_flags, parse_description
-from shared.config import (
+from baseline.config import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
@@ -23,8 +23,8 @@ from shared.config import (
     TIER_WEIGHTS,
     TOP_K,
 )
-from shared.embedding import get_embedding
-from shared.image_embedding import get_image_embedding
+from baseline.embedding import get_embedding
+from baseline.image_embedding import get_image_embedding
 
 
 def search_similar_packaging(image_path: str, top_k: int = TOP_K) -> tuple[list[dict], str]:
