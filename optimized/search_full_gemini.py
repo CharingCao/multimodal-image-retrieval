@@ -12,9 +12,9 @@ import numpy as np
 from collections import defaultdict
 from pathlib import Path
 from qdrant_client import QdrantClient
-from extended.analyze_full import analyze_full
-from extended.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
-from extended.config_full_gemini import (
+from optimized.analyze_full import analyze_full
+from optimized.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
+from optimized.config_full_gemini import (
     COLLECTION_NAME,
     GEMINI_VECTOR_NAME,
     QDRANT_HOST,
@@ -26,12 +26,12 @@ from extended.config_full_gemini import (
     TOP_K,
 )
 
-from embedding import get_embedding
+from shared.embedding import get_embedding
 
 # ============================================================
 # Gemini 图片 embedding
 # ============================================================
-from extended.image_embedding_gemini import ( get_image_embedding as get_gemini_embedding )
+from optimized.image_embedding_gemini import ( get_image_embedding as get_gemini_embedding )
 
 # ============================================================
 # Tier1规则评分
@@ -509,12 +509,12 @@ def main():
 
         print(
             "用法: "
-            "python search_full_gemini.py "
+            "python -m optimized.search_full_gemini "
             "<图片路径> [返回数量]"
         )
         print(
             "示例: "
-            "python search_full_gemini.py "
+            "python -m optimized.search_full_gemini "
             "data/image_input/01.png 10"
         )
         sys.exit( 1 )

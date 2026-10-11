@@ -1,4 +1,4 @@
-from extended.search_weight import search_similar_packaging
+from optimized.weight_tuning.search_weight import search_similar_packaging
 import os
 
 TEST_IMAGES=[]
@@ -135,43 +135,27 @@ def evaluate(weight):
         score
     )
 
-records=[]
+def main():
+    if not TEST_IMAGES:
+        raise SystemExit("data/image_input/ 中没有可用的测试图片")
 
-for i,w in enumerate(WEIGHTS):
+    records = []
+    for i, w in enumerate(WEIGHTS):
+        print(f"\n{i+1}/{len(WEIGHTS)}", w)
+        t1, t10, score = evaluate(w)
+        records.append({
+            "score": score,
+            "top1": t1,
+            "top10": t10,
+            "weight": w,
+        })
+        print(f"Top1:{t1:.2%}", f"Top10:{t10:.2%}", f"Score:{score:.4f}")
 
-    print(
-        f"\n{i+1}/{len(WEIGHTS)}",
-        w
-    )
+    records.sort(key=lambda item: item["score"], reverse=True)
+    print("\n最佳10组")
+    for record in records[:10]:
+        print("\n", record)
 
-    t1,t10,s=evaluate(w)
-    records.append(
-        {
-            "score":s,
-            "top1":t1,
-            "top10":t10,
-            "weight":w
-        }
-    )
 
-    print(
-        f"Top1:{t1:.2%}",
-        f"Top10:{t10:.2%}",
-        f"Score:{s:.4f}"
-    )
-
-records.sort(
-    key=lambda x:x["score"],
-    reverse=True
-)
-
-print(
-    "\n最佳10组"
-)
-
-for r in records[:10]:
-
-    print(
-        "\n",
-        r
-    )
+if __name__ == "__main__":
+    main()

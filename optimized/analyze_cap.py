@@ -1,7 +1,7 @@
 import base64
 import mimetypes
 from openai import OpenAI
-from config import (
+from optimized.config_full import (
 
     DASHSCOPE_API_KEY,
     DASHSCOPE_BASE_URL,

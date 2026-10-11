@@ -1,5 +1,5 @@
-from extended.analyze_structure import analyze_packaging_image
-from extended.analyze_cap import analyze_cap
+from optimized.analyze_structure import analyze_packaging_image
+from optimized.analyze_cap import analyze_cap
 
 def analyze_full(image_path):
 

@@ -2,7 +2,7 @@ import os
 import json
 from qdrant_client import QdrantClient
 
-from config import (
+from shared.config import (
     QDRANT_HOST,
     QDRANT_PORT,
     COLLECTION_NAME
@@ -14,7 +14,7 @@ from config import (
 # =========================
 
 CACHE_FILE = os.path.join(
-    os.path.dirname(__file__),
+    os.path.dirname(os.path.dirname(__file__)),
     "data",
     "descriptions_cache.json"
 )

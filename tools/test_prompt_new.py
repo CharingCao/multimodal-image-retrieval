@@ -1,4 +1,4 @@
-from extended.analyze_full import analyze_full
+from optimized.analyze_full import analyze_full
 
 images = [
     "data/image_input/01.png",

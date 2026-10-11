@@ -4,17 +4,18 @@
 架构: 文本硬过滤(产品类别+泵头+瓶颈) → CLIP视觉精排 + 文本辅助排序
 """
 
-TIER_CACHE = {}
 import sys
+import re
+import numpy as np
 from collections import defaultdict
 from pathlib import Path
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
-from extended.analyze_full import analyze_full
-from extended.build_index_full import build_tier_text, extract_struct_flags, parse_description
-from extended.config_full import (
+from optimized.analyze_full import analyze_full
+from optimized.build_index_full import build_tier_text, extract_struct_flags, parse_description
+from optimized.config_full import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
@@ -24,8 +25,8 @@ from extended.config_full import (
     TIER_WEIGHTS,
     TOP_K,
 )
-from embedding import get_embedding
-from image_embedding import get_image_embedding
+from shared.embedding import get_embedding
+from shared.image_embedding import get_image_embedding
 
 def calculate_tier1_score(
         query_fields,
@@ -73,14 +74,116 @@ def calculate_tier1_score(
         score += 0.15
     return score
 
-def search_similar_packaging(image_path: str,weight = None, top_k: int = TOP_K) -> tuple[list[dict], str]:
+def split_structure_values(value: str) -> set[str]:
+    """
+    将一个结构字段拆分成属性集合。
+
+    例如：
+    正圆形，直壁，等径，一体通身，无腰线
+    ->
+    {"正圆形", "直壁", "等径", "一体通身", "无腰线"}
+    """
+    if not value:
+        return set()
+
+    values = re.split(
+        r"[，,；;、|]",
+        value,
+    )
+
+    return {
+        re.sub(r"\s+", "", item)
+        for item in values
+        if item.strip()
+    }
+
+def calculate_value_similarity(
+    query_value: str,
+    target_value: str,
+) -> float:
+    """
+    计算单个结构字段的属性相似度，范围0~1。
+    使用Dice系数，兼顾共同属性和不同属性。
+    """
+    query_items = split_structure_values(query_value)
+    target_items = split_structure_values(target_value)
+
+    if not query_items or not target_items:
+        return 0.0
+
+    if query_items == target_items:
+        return 1.0
+
+    common_count = len(
+        query_items & target_items
+    )
+
+    return (
+        2.0 * common_count
+        / (len(query_items) + len(target_items))
+    )
+
+def calculate_tier2_rule_score(
+    query_fields: dict[str, str],
+    target_fields: dict[str, str],
+) -> float:
+    """
+    Tier2结构规则分：
+    整体瓶型、封口方式、泵头、瓶盖。
+    """
+    field_weights = {
+        "整体瓶型": 0.35,
+        "封口方式": 0.15,
+        "泵头": 0.20,
+        "瓶盖": 0.30,
+    }
+
+    score = 0.0
+
+    for field_name, field_weight in field_weights.items():
+        field_score = calculate_value_similarity(
+            query_fields.get(field_name, ""),
+            target_fields.get(field_name, ""),
+        )
+        score += field_score * field_weight
+
+    return score
+
+
+def calculate_tier3_rule_score(
+    query_fields: dict[str, str],
+    target_fields: dict[str, str],
+) -> float:
+    """
+    Tier3结构规则分：
+    瓶颈、瓶肩、瓶身、瓶底。
+    """
+    field_weights = {
+        "瓶颈": 0.20,
+        "瓶肩": 0.20,
+        "瓶身": 0.40,
+        "瓶底": 0.20,
+    }
+
+    score = 0.0
+
+    for field_name, field_weight in field_weights.items():
+        field_score = calculate_value_similarity(
+            query_fields.get(field_name, ""),
+            target_fields.get(field_name, ""),
+        )
+        score += field_score * field_weight
+
+    return score
+
+def search_similar_packaging(image_path: str, top_k: int = TOP_K) -> tuple[list[dict], str]:
     """
     输入一张包材图片路径，返回最相似的 top_k 个包材信息。
     四层加权检索：
-      clip  (CLIP图片向量)     × 0.55  ← 主力，直接像素级视觉对比
-      tier1 (产品类别)         × 0.05
-      tier2 (瓶型+封口+泵头+盖) × 0.35
-      tier3 (瓶颈+肩+身+底)    × 0.05
+      clip  (CLIP图片向量)     × 0.45  ← 主力，直接像素级视觉对比
+      tier1 (产品类别)         × 0.10
+      tier2 (瓶型+封口+泵头+盖) × 0.20
+      tier3 (瓶颈+肩+身+底)    × 0.25
     """
     print(f"\n{'='*60}")
     print("[1/5] 正在生成 CLIP 图片向量...")
@@ -106,7 +209,6 @@ def search_similar_packaging(image_path: str,weight = None, top_k: int = TOP_K) 
     print(f"  Tier2 (权重{TIER_WEIGHTS['tier2']:.0%}): {t2_text}")
     print(f"  Tier3 (权重{TIER_WEIGHTS['tier3']:.0%}): {t3_text}")
 
-    vec1 = get_embedding(t1_text)
     vec2 = get_embedding(t2_text)
     vec3 = get_embedding(t3_text)
 
@@ -121,7 +223,7 @@ def search_similar_packaging(image_path: str,weight = None, top_k: int = TOP_K) 
     print(f"{'='*60}")
 
     qdrant = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-    candidate_pool = max(top_k*20,100)
+    candidate_pool = max(top_k,100)
 
     results_clip = qdrant.query_points(
         collection_name=COLLECTION_NAME,
@@ -141,9 +243,6 @@ def search_similar_packaging(image_path: str,weight = None, top_k: int = TOP_K) 
     scores = defaultdict(float)
     payloads = {}
     tier_scores = defaultdict(lambda: {"clip": 0.0, "tier1": 0.0, "tier2": 0.0, "tier3": 0.0})
-
-    if weight is None:
-        weight = TIER_WEIGHTS
 
     wc = TIER_WEIGHTS["clip"]
     w1, w2, w3 = TIER_WEIGHTS["tier1"], TIER_WEIGHTS["tier2"], TIER_WEIGHTS["tier3"]
@@ -175,47 +274,52 @@ def search_similar_packaging(image_path: str,weight = None, top_k: int = TOP_K) 
             TIER3_FIELDS
         )
 
-        cache_key = pid
-
-        if cache_key in TIER_CACHE:
-
-            target_vec2,target_vec3 = TIER_CACHE[cache_key]
-
-        else:
-
-            target_vec2 = get_embedding(
-                target_t2_text
-            )
-
-            target_vec3 = get_embedding(
-                target_t3_text
-            )
-
-            TIER_CACHE[cache_key]=(
-                target_vec2,
-                target_vec3
-            )
-
-        # cosine similarity
-        import numpy as np
-
-        tier2_score = np.dot(
-            vec2,
-            target_vec2
-        ) / (
-            np.linalg.norm(vec2)
-            *
-            np.linalg.norm(target_vec2)
+        target_vec2 = get_embedding(
+            target_t2_text
         )
 
+        target_vec3 = get_embedding(
+            target_t3_text
+        )
 
-        tier3_score = np.dot(
-            vec3,
-            target_vec3
-        ) / (
-            np.linalg.norm(vec3)
-            *
-            np.linalg.norm(target_vec3)
+        # cosine similarity
+
+        tier2_vector_score = float(
+            np.dot(vec2, target_vec2)
+            / (
+                np.linalg.norm(vec2)
+                * np.linalg.norm(target_vec2)
+                + 1e-12
+            )
+        )
+
+        tier3_vector_score = float(
+            np.dot(vec3, target_vec3)
+            / (
+                np.linalg.norm(vec3)
+                * np.linalg.norm(target_vec3)
+                + 1e-12
+            )
+        )
+
+        tier2_rule_score = calculate_tier2_rule_score(
+            fields,
+            target_fields,
+        )
+
+        tier3_rule_score = calculate_tier3_rule_score(
+            fields,
+            target_fields,
+        )
+
+        tier2_score = (
+            tier2_vector_score * 0.70
+            + tier2_rule_score * 0.30
+        )
+
+        tier3_score = (
+            tier3_vector_score * 0.70
+            + tier3_rule_score * 0.30
         )
 
         tier_scores[pid]["tier2"] = tier2_score
@@ -234,6 +338,7 @@ def search_similar_packaging(image_path: str,weight = None, top_k: int = TOP_K) 
             fields,
             desc
         )
+
         scores[pid] += (
             tier_scores[pid]["tier1"] * w1 )
 
@@ -281,8 +386,8 @@ def print_results(query_image: str, query_desc: str, matches: list[dict]):
 
 def main():
     if len(sys.argv) < 2:
-        print("用法: python search.py <图片路径> [返回数量]")
-        print("示例: python search.py data/image_input/20260330-165702.jpg 5")
+        print("用法: python -m optimized.search_full <图片路径> [返回数量]")
+        print("示例: python -m optimized.search_full data/image_input/query.jpg 5")
         sys.exit(1)
         
     image_path = sys.argv[1]
@@ -292,7 +397,7 @@ def main():
         print(f"[ERROR] 图片不存在: {image_path}")
         sys.exit(1)
 
-    matches, query_desc = search_similar_packaging(image_path, None, top_k)
+    matches, query_desc = search_similar_packaging(image_path, top_k)
     print_results(image_path, query_desc, matches)
 
 if __name__ == "__main__":

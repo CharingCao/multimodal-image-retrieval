@@ -4,13 +4,13 @@
 支持断点续传：已分析过的图片（描述缓存在 JSON 文件中）不会重复调用 VL 模型。
 
 命令行：
-  python build_index_full.py
+  python -m baseline.build_index
       全量处理 data/images/ 下所有图片，点 id 为 1..N（与排序一致），已存在的 id 会被覆盖。
 
-  python build_index_full.py --recreate
+  python -m baseline.build_index --recreate
       删除当前集合内全部向量数据后重新建库（集合定义会重建）。
 
-  python build_index_full.py --skip-indexed
+  python -m baseline.build_index --skip-indexed
       跳过 Qdrant 里已有 filename 的图片，只为新图建向量；新点 id 接在当前最大 id 之后。
 """
 
@@ -24,8 +24,8 @@ from pathlib import Path
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
-from extended.analyze_full import analyze_full
-from extended.config_full import (
+from baseline.analyze import analyze_packaging_image
+from shared.config import (
     CLIP_DIM,
     COLLECTION_NAME,
     EMBEDDING_DIM,
@@ -36,10 +36,10 @@ from extended.config_full import (
     TIER2_FIELDS,
     TIER3_FIELDS,
 )
-from embedding import get_embedding
-from image_embedding import get_image_embedding
+from shared.embedding import get_embedding
+from shared.image_embedding import get_image_embedding
 
-CACHE_FILE = os.path.join(os.path.dirname(__file__), "data", "descriptions_cache_full.json") 
+CACHE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "descriptions_cache.json")
 
 
 def load_cache() -> dict:
@@ -189,7 +189,7 @@ def build(*, recreate: bool = False, skip_indexed: bool = False):
         else:
             print(f"[{prog}/{total}] id={point_id} {fname} - 正在分析...")
             try:
-                description = analyze_full(image_path)
+                description = analyze_packaging_image(image_path)
                 cache[fname] = {"description": description}
                 save_cache(cache)
             except Exception as e:

@@ -4,7 +4,7 @@
 
 from openai import OpenAI
 
-from config import DASHSCOPE_API_KEY, DASHSCOPE_BASE_URL, EMBEDDING_MODEL, EMBEDDING_DIM
+from shared.config import DASHSCOPE_API_KEY, DASHSCOPE_BASE_URL, EMBEDDING_MODEL, EMBEDDING_DIM
 
 
 client = OpenAI(api_key=DASHSCOPE_API_KEY, base_url=DASHSCOPE_BASE_URL)

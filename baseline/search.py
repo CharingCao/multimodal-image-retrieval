@@ -11,9 +11,9 @@ from pathlib import Path
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, MatchValue
 
-from analyze import analyze_packaging_image
-from build_index import build_tier_text, extract_struct_flags, parse_description
-from config import (
+from baseline.analyze import analyze_packaging_image
+from baseline.build_index import build_tier_text, extract_struct_flags, parse_description
+from shared.config import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
@@ -23,8 +23,8 @@ from config import (
     TIER_WEIGHTS,
     TOP_K,
 )
-from embedding import get_embedding
-from image_embedding import get_image_embedding
+from shared.embedding import get_embedding
+from shared.image_embedding import get_image_embedding
 
 
 def search_similar_packaging(image_path: str, top_k: int = TOP_K) -> tuple[list[dict], str]:
@@ -188,8 +188,8 @@ def print_results(query_image: str, query_desc: str, matches: list[dict]):
 
 def main():
     if len(sys.argv) < 2:
-        print("用法: python search.py <图片路径> [返回数量]")
-        print("示例: python search.py data/image_input/20260330-165702.jpg 5")
+        print("用法: python -m baseline.search <图片路径> [返回数量]")
+        print("示例: python -m baseline.search data/image_input/query.jpg 5")
         sys.exit(1)
 
     image_path = sys.argv[1]

@@ -36,7 +36,7 @@ COLLECTION_NAME = os.getenv( "QDRANT_COLLECTION_GEMINI", "packaging_full_v3_gemi
 # 图片目录
 # ============================================================
 
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 IMAGES_DIR = os.path.join( BASE_DIR, "data", "images" )
 IMAGE_INPUT_DIR = os.path.join( BASE_DIR, "data", "image_input" )
 

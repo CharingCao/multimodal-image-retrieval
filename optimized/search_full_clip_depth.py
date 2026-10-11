@@ -35,15 +35,15 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient
 
-from extended.analyze_full import analyze_full
+from optimized.analyze_full import analyze_full
 
-from extended.build_index_full import (
+from optimized.build_index_full import (
     build_tier_text,
     extract_struct_flags,
     parse_description,
 )
 
-from extended.config_full import (
+from optimized.config_full import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
@@ -56,9 +56,9 @@ from extended.config_full import (
     TOP_K,
 )
 
-from embedding import get_embedding
+from shared.embedding import get_embedding
 
-from image_embedding import ( get_image_embedding as get_clip_embedding)
+from shared.image_embedding import ( get_image_embedding as get_clip_embedding)
 
 
 # ============================================================
@@ -1454,13 +1454,13 @@ def main():
 
         print(
             "用法："
-            "python search_full_clip_depth.py "
+            "python -m optimized.search_full_clip_depth "
             "<图片路径> [返回数量]"
         )
 
         print(
             "示例："
-            "python search_full_clip_depth.py "
+            "python -m optimized.search_full_clip_depth "
             "\"data/image_input/03.png\" 10"
         )
 

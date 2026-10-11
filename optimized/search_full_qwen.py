@@ -14,9 +14,9 @@ import numpy as np
 from collections import defaultdict
 from pathlib import Path
 from qdrant_client import QdrantClient
-from extended.analyze_full import analyze_full
-from extended.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
-from extended.config_full_qwen import (
+from optimized.analyze_full import analyze_full
+from optimized.build_index_full import ( build_tier_text, extract_struct_flags, parse_description)
+from optimized.config_full_qwen import (
     COLLECTION_NAME,
     QDRANT_HOST,
     QDRANT_PORT,
@@ -28,12 +28,12 @@ from extended.config_full_qwen import (
     TOP_K,
 )
 
-from embedding import get_embedding
+from shared.embedding import get_embedding
 
 # ============================================================
 # Qwen 图片 embedding
 # ============================================================
-from extended.image_embedding_Qwen import (
+from optimized.image_embedding_Qwen import (
     get_image_embedding as get_qwen_embedding
 )
 
@@ -513,12 +513,12 @@ def main():
 
         print(
             "用法: "
-            "python search_full_qwen.py "
+            "python -m optimized.search_full_qwen "
             "<图片路径> [返回数量]"
         )
         print(
             "示例: "
-            "python search_full_qwen.py "
+            "python -m optimized.search_full_qwen "
             "data/image_input/01.png 10"
         )
         sys.exit( 1 )

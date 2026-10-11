@@ -18,20 +18,20 @@ import numpy as np
 import requests
 
 from qdrant_client import QdrantClient
-from extended.analyze_full import analyze_full
-from extended.build_index_full import ( build_tier_text, extract_struct_flags, parse_description )
+from optimized.analyze_full import analyze_full
+from optimized.build_index_full import ( build_tier_text, extract_struct_flags, parse_description )
 
 # ============================================================
 # Qdrant
 # ============================================================
 
-from extended.config_full import ( COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT )
+from optimized.config_full import ( COLLECTION_NAME, QDRANT_HOST, QDRANT_PORT )
 
 # ============================================================
 # Qwen配置
 # ============================================================
 
-from extended.config_full_qwen import (
+from optimized.config_full_qwen import (
     QWEN_VECTOR_NAME,
     TIER1_FIELDS,
     TIER2_FIELDS,
@@ -39,11 +39,11 @@ from extended.config_full_qwen import (
     TIER_WEIGHTS,
     TOP_K,
 )
-from embedding import get_embedding
-from extended.image_embedding_Qwen import ( get_image_embedding as get_qwen_embedding, )
+from shared.embedding import get_embedding
+from optimized.image_embedding_Qwen import ( get_image_embedding as get_qwen_embedding, )
 
 # Depth查询图片仍然使用CLIP编码
-from image_embedding import ( get_image_embedding as get_clip_embedding )
+from shared.image_embedding import ( get_image_embedding as get_clip_embedding )
 
 # ============================================================
 # Depth配置
@@ -832,7 +832,7 @@ def main():
 
         print(
             "用法: "
-            "python search_full_qwen_depth_bonus.py "
+            "python -m optimized.search_full_qwen_depth "
             "<图片路径> "
             "[返回数量] "
             "[depth_alpha]"
@@ -841,13 +841,13 @@ def main():
         print( "\n示例：" )
         print( "验证Qwen baseline：" )
         print(
-            "python search_full_qwen_depth_bonus.py "
+            "python -m optimized.search_full_qwen_depth "
             "\"data/image_input/03.png\" "
             "10 0"
         )
         print( "\nDepth辅助 alpha=0.05：" )
         print(
-            "python search_full_qwen_depth_bonus.py "
+            "python -m optimized.search_full_qwen_depth "
             "\"data/image_input/03.png\" "
             "10 0.05"
         )
